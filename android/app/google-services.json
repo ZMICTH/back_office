@@ -1,0 +1,49 @@
+{
+  "project_info": {
+    "project_number": "601078766720",
+    "firebase_url": "https://losser-bar-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "losser-bar",
+    "storage_bucket": "losser-bar.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:601078766720:android:1dbb3b257ca702308fda65",
+        "android_client_info": {
+          "package_name": "com.example.back_office"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBA6eaj6Ozyv6cyzI18hjmPPkImYx6Z8EE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:601078766720:android:e3d569392e67e3388fda65",
+        "android_client_info": {
+          "package_name": "com.example.losser_bar"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBA6eaj6Ozyv6cyzI18hjmPPkImYx6Z8EE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
