@@ -5,6 +5,8 @@ import 'package:back_office/services/login_service.dart';
 
 class LoginController {
   Map<String, dynamic> currentuser = {};
+  List<PartnerUser> PartnerUsers = List.empty();
+
   final LoginService service;
 
   StreamController<bool> onSyncController = StreamController();
@@ -20,5 +22,13 @@ class LoginController {
 
   void addUser(MemberUser user) async {
     service.addUser(user);
+  }
+
+  Future<List<PartnerUser>> fetchPartnerUser() async {
+    print("fetchReserveTableHistory was: ${PartnerUsers}");
+    onSyncController.add(true);
+    PartnerUsers = await service.getAllPartnerUser();
+    onSyncController.add(false);
+    return PartnerUsers;
   }
 }

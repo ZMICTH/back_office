@@ -273,7 +273,10 @@ class _FoodAndBeverageManagementState extends State<FoodAndBeverageManagement> {
       // Optionally, refresh the list or show a success message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('${item.nameFoodBeverage} deleted successfully!'),
+          content: Text(
+            '${item.nameFoodBeverage} deleted successfully!',
+            style: TextStyle(color: Colors.white),
+          ),
           backgroundColor: Colors.red[600],
         ),
       );
@@ -285,7 +288,10 @@ class _FoodAndBeverageManagementState extends State<FoodAndBeverageManagement> {
       // Optionally, show an error message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to delete ${item.nameFoodBeverage}'),
+          content: Text(
+            'Failed to delete ${item.nameFoodBeverage}',
+            style: TextStyle(color: Colors.white),
+          ),
           backgroundColor: Colors.red[600],
         ),
       );

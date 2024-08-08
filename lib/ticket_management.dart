@@ -120,6 +120,8 @@ class _TableManagementScreenState extends State<TicketManagementScreen> {
   }
 
   Widget _buildTicketSection(String title, List<TicketConcertModel> tickets) {
+    bool isPastConcerts = title == "Past Concerts";
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -238,77 +240,78 @@ class _TableManagementScreenState extends State<TicketManagementScreen> {
                       SizedBox(
                         height: 10,
                       ),
-                      Padding(
-                        padding: const EdgeInsets.all(2.0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            InkWell(
-                              onTap: () {
-                                print("Edit tapped for ${ticket.eventName}");
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (context) => EditTicketPage(
-                                      ticket: ticket,
-                                      ticketImagePath: ticket.imageEvent,
+                      if (!isPastConcerts)
+                        Padding(
+                          padding: const EdgeInsets.all(2.0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              InkWell(
+                                onTap: () {
+                                  print("Edit tapped for ${ticket.eventName}");
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (context) => EditTicketPage(
+                                        ticket: ticket,
+                                        ticketImagePath: ticket.imageEvent,
+                                      ),
                                     ),
+                                  );
+                                },
+                                child: Text(
+                                  "Edit",
+                                  style: TextStyle(
+                                    color: Colors.blue,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
                                   ),
-                                );
-                              },
-                              child: Text(
-                                "Edit",
-                                style: TextStyle(
-                                  color: Colors.blue,
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
-                            ),
-                            InkWell(
-                              onTap: () {
-                                showDialog(
-                                  context: context,
-                                  builder: (BuildContext context) {
-                                    return AlertDialog(
-                                      title: Text("Confirm Delete"),
-                                      content: Text(
-                                          "Are you sure you want to delete ${ticket.eventName}?"),
-                                      actions: <Widget>[
-                                        TextButton(
-                                          child: Text("Cancel"),
-                                          onPressed: () {
-                                            Navigator.of(context).pop();
-                                          },
-                                        ),
-                                        TextButton(
-                                          child: Text("Delete",
-                                              style: TextStyle(
-                                                color: Colors.red,
-                                                fontSize: 20,
-                                                fontWeight: FontWeight.bold,
-                                              )),
-                                          onPressed: () {
-                                            Navigator.of(context).pop();
-                                            _deleteTicket(ticket);
-                                          },
-                                        ),
-                                      ],
-                                    );
-                                  },
-                                );
-                              },
-                              child: Text(
-                                "Delete",
-                                style: TextStyle(
-                                  color: Colors.red,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
+                              InkWell(
+                                onTap: () {
+                                  showDialog(
+                                    context: context,
+                                    builder: (BuildContext context) {
+                                      return AlertDialog(
+                                        title: Text("Confirm Delete"),
+                                        content: Text(
+                                            "Are you sure you want to delete ${ticket.eventName}?"),
+                                        actions: <Widget>[
+                                          TextButton(
+                                            child: Text("Cancel"),
+                                            onPressed: () {
+                                              Navigator.of(context).pop();
+                                            },
+                                          ),
+                                          TextButton(
+                                            child: Text("Delete",
+                                                style: TextStyle(
+                                                  color: Colors.red,
+                                                  fontSize: 20,
+                                                  fontWeight: FontWeight.bold,
+                                                )),
+                                            onPressed: () {
+                                              Navigator.of(context).pop();
+                                              _deleteTicket(ticket);
+                                            },
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  );
+                                },
+                                child: Text(
+                                  "Delete",
+                                  style: TextStyle(
+                                    color: Colors.red,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
                     ],
                   ),
                 ),
@@ -329,7 +332,10 @@ class _TableManagementScreenState extends State<TicketManagementScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('${ticket.eventName} deleted successfully!'),
+          content: Text(
+            '${ticket.eventName} deleted successfully!',
+            style: TextStyle(color: Colors.white),
+          ),
           backgroundColor: Colors.red[600],
         ),
       );
@@ -339,7 +345,10 @@ class _TableManagementScreenState extends State<TicketManagementScreen> {
       print('Error deleting ticket: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to delete ${ticket.eventName}'),
+          content: Text(
+            'Failed to delete ${ticket.eventName}',
+            style: TextStyle(color: Colors.white),
+          ),
           backgroundColor: Colors.red[600],
         ),
       );

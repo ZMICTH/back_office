@@ -1,3 +1,4 @@
+import 'package:back_office/model/login_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
@@ -97,7 +98,10 @@ class BookingTicket {
   List<String>? sharedWith;
   String partnerId;
   String? tableNo; // Add tableNo
-  String? roundTable; // Add roundTable
+  String? roundtable; // Add roundtable
+  bool? checkOut;
+  bool? outOfTimeCheckIn;
+  String userPhone;
 
   BookingTicket({
     this.id = "",
@@ -116,7 +120,10 @@ class BookingTicket {
     required this.sharedWith,
     required this.partnerId,
     required this.tableNo, // Add tableNo
-    required this.roundTable, // Add roundTable
+    required this.roundtable, // Add roundtable
+    required this.checkOut,
+    required this.outOfTimeCheckIn,
+    required this.userPhone,
   });
 
   factory BookingTicket.fromJson(Map<String, dynamic> json) {
@@ -141,7 +148,10 @@ class BookingTicket {
           : null,
       partnerId: json['partnerId'] as String,
       tableNo: json['tableNo'] as String? ?? "",
-      roundTable: json['roundTable'] as String? ?? "",
+      roundtable: json['roundtable'] as String? ?? "",
+      checkOut: json['checkOut'],
+      outOfTimeCheckIn: json['outOfTimeCheckIn'],
+      userPhone: json['userPhone'] as String,
     );
   }
 
@@ -167,7 +177,10 @@ class BookingTicket {
           : null,
       partnerId: json['partnerId'] as String,
       tableNo: json['tableNo'] as String? ?? "",
-      roundTable: json['roundTable'] as String? ?? "",
+      roundtable: json['roundtable'] as String? ?? "",
+      checkOut: json['checkOut'],
+      outOfTimeCheckIn: json['outOfTimeCheckIn'],
+      userPhone: json['userPhone'] as String,
     );
   }
 
@@ -188,7 +201,10 @@ class BookingTicket {
       'sharedWith': sharedWith,
       'partnerId': partnerId,
       'tableNo': tableNo, // Add tableNo
-      'roundTable': roundTable, // Add roundTable
+      'roundtable': roundtable, // Add roundtable
+      'checkOut': checkOut,
+      'outOfTimeCheckIn': outOfTimeCheckIn,
+      'userPhone': userPhone,
     };
   }
 }
@@ -295,9 +311,62 @@ class ReservationTicketProvider extends ChangeNotifier {
               'Ticket ': ticket.ticketQuantity,
               'Total Price': ticket.totalPayment,
               'Payable': ticket.payable ? 'Yes' : 'No',
-              'Shared Count': ticket.sharedCount,
+              'Shared Count': ticket.sharedWith?.length,
               'Shared With': ticket.sharedWith?.join(', ') ?? '',
             })
         .toList();
+  }
+
+  // Method to get available tables based on zone and availability status
+  List<String> getAvailableTables(
+      MemberUserModel memberUserModel, String tableLabel) {
+    Set<String> reservedTables = _allReservationTicket
+        .where((reservation) =>
+            reservation.selectedTableLabel == tableLabel &&
+            reservation.checkIn &&
+            !(reservation.checkOut ?? false)) // Ensure checkOut is non-nullable
+        .map((reservation) =>
+            reservation.tableNo ?? "") // Ensure tableNo is non-nullable
+        .toSet();
+
+    List<String> availableTables = [];
+    // Get totalTables from MemberUserModel
+    var tableInfo = memberUserModel.memberUser?.tableLabels.firstWhere(
+        (table) => table['label'] == tableLabel,
+        orElse: () => <String, dynamic>{});
+    int totalTables = tableInfo?['totaloftable'] ?? 0;
+
+    for (var i = 1; i <= totalTables; i++) {
+      String tableNo = "$tableLabel $i";
+      if (!reservedTables.contains(tableNo)) {
+        availableTables.add(tableNo);
+      }
+    }
+
+    print("Available tables for $tableLabel: $availableTables");
+    return availableTables;
+  }
+
+  // Method to get round tables and their availability status for a specific table on a given date
+  Map<String, bool> getRoundTableAvailability(String tableNo, DateTime date) {
+    List<int> usedRoundTables = _allReservationTicket
+        .where((reservation) =>
+            reservation.tableNo == tableNo &&
+            reservation.eventDate.year == date.year &&
+            reservation.eventDate.month == date.month &&
+            reservation.eventDate.day == date.day)
+        .map((reservation) => int.tryParse(reservation.roundtable ?? '0') ?? 0)
+        .toList();
+
+    print("Used round tables for $tableNo on $date: $usedRoundTables");
+
+    Map<String, bool> roundTableAvailability = {};
+    for (int i = 1; i <= 5; i++) {
+      roundTableAvailability[i.toString()] = !usedRoundTables.contains(i);
+    }
+
+    print(
+        "Round table availability for $tableNo on $date: $roundTableAvailability");
+    return roundTableAvailability;
   }
 }

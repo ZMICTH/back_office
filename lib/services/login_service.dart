@@ -5,6 +5,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 abstract class LoginService {
   Future<Map<String, dynamic>> getLogin(String userId);
   void addUser(MemberUser user);
+
+  Future<List<PartnerUser>> getAllPartnerUser();
 }
 
 class LoginFirebaseService implements LoginService {
@@ -40,5 +42,18 @@ class LoginFirebaseService implements LoginService {
       'tableLabels': user.tableLabels,
       'userStatus': user.userStatus,
     });
+  }
+
+  @override
+  Future<List<PartnerUser>> getAllPartnerUser() async {
+    print("getAllPartnerUser is called");
+    QuerySnapshot qs = await FirebaseFirestore.instance
+        .collection('partner')
+        .where('role', isEqualTo: "partner")
+        .get();
+    print("Partner count: ${qs.docs.length}");
+    AllPartnerUsers PartnerUsers = AllPartnerUsers.fromSnapshot(qs);
+    print(PartnerUsers.partnerusers);
+    return PartnerUsers.partnerusers;
   }
 }

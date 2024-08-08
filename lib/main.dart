@@ -1,7 +1,9 @@
 import 'package:back_office/admin.dart';
+import 'package:back_office/admin_report.dart';
 import 'package:back_office/component/new_food.dart';
 import 'package:back_office/component/new_table.dart';
 import 'package:back_office/component/new_ticket.dart';
+import 'package:back_office/component/verify_if_eventdate.dart';
 import 'package:back_office/finance_report_page.dart';
 import 'package:back_office/firebase_options.dart';
 import 'package:back_office/food_management.dart';
@@ -14,7 +16,7 @@ import 'package:back_office/model/reserve_table_model.dart';
 import 'package:back_office/model/reserve_ticket_model.dart';
 import 'package:back_office/register_user.dart';
 import 'package:back_office/component/verify_qr_table.dart';
-import 'package:back_office/component/verify_qr_ticket.dart';
+
 import 'package:back_office/table_management.dart';
 import 'package:back_office/ticket_management.dart';
 import 'package:back_office/verify_reservation.dart';
@@ -91,8 +93,9 @@ class MyApp extends StatelessWidget {
         // '/profile': (context) => ProfilePage(),
         '/home': (context) => NewHomePage(),
         '/verify': (context) => VerifyReservationPage(),
+        '/verifyticket': (context) => VerifyTicketPage(),
         '/qrtable': (context) => VerifyTablePage(),
-        '/qrticket': (context) => VerifyTicketPage(),
+        // '/qrticket': (context) => VerifyTicketPage(),
         '/food': (context) => FoodAndBeverageManagement(),
         '/newfood': (context) => NewProductPage(),
         '/table': (context) => TableManagementScreen(),
@@ -102,6 +105,7 @@ class MyApp extends StatelessWidget {
         '/report': (context) => FinancialReportPage(),
 
         '/admin': (context) => AdminHomePage(),
+        '/adminreport': (context) => AdminReportPage(),
       },
     );
   }

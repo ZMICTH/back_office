@@ -170,7 +170,10 @@ class _VerifyTicketPageState extends State<VerifyTicketPage> {
       // Show a success message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Customer checked in successfully!'),
+          content: Text(
+            'Customer checked in successfully!',
+            style: TextStyle(color: Colors.white),
+          ),
           backgroundColor: Colors.green,
         ),
       );

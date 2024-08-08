@@ -442,13 +442,20 @@ void _updateCloseDate(
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-          content: Text(newCloseDate
-              ? "Store closed successfully"
-              : "Store reopened successfully")),
+          content: Text(
+        newCloseDate
+            ? "Store closed successfully"
+            : "Store reopened successfully",
+        style: TextStyle(color: Colors.white),
+      )),
     );
   } catch (e) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Failed to update the store status: $e")),
+      SnackBar(
+          content: Text(
+        "Failed to update the store status: $e",
+        style: TextStyle(color: Colors.white),
+      )),
     );
   }
 }

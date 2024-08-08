@@ -439,7 +439,10 @@ class _EditTicketPageState extends State<EditTicketPage> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('$_editedEventName updated successfully!'),
+          content: Text(
+            '$_editedEventName updated successfully!',
+            style: TextStyle(color: Colors.white),
+          ),
           backgroundColor: Colors.green[600],
         ),
       );
@@ -448,8 +451,10 @@ class _EditTicketPageState extends State<EditTicketPage> {
       print("Error updating document: $error");
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content:
-              Text('Failed to update $_editedEventName. Please try again.'),
+          content: Text(
+            'Failed to update $_editedEventName. Please try again.',
+            style: TextStyle(color: Colors.white),
+          ),
           backgroundColor: Colors.red[600],
         ),
       );

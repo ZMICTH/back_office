@@ -80,6 +80,19 @@ class AppDrawer extends StatelessWidget {
               Navigator.pushNamed(context, '/verify');
             },
           ),
+          // ListTile(
+          //   leading: Icon(Icons.verified),
+          //   title: Text(
+          //     'Verify Ticket Reservation',
+          //     style: TextStyle(
+          //       fontSize: 20,
+          //       fontWeight: FontWeight.bold,
+          //     ),
+          //   ),
+          //   onTap: () {
+          //     Navigator.pushNamed(context, '/verifyticket');
+          //   },
+          // ),
           ListTile(
             leading: Icon(Icons.download),
             title: Text(

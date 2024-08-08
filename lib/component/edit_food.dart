@@ -469,7 +469,10 @@ class _EditItemPageState extends State<EditItemPage> {
       // Show a SnackBar upon successful data update
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('$_editedProductname updated successfully!'),
+          content: Text(
+            '$_editedProductname updated successfully!',
+            style: TextStyle(color: Colors.white),
+          ),
           backgroundColor: Colors.green[600],
         ),
       );
@@ -478,8 +481,10 @@ class _EditItemPageState extends State<EditItemPage> {
       print("Error updating document: $error");
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content:
-              Text('Failed to update $_editedProductname. Please try again.'),
+          content: Text(
+            'Failed to update $_editedProductname. Please try again.',
+            style: TextStyle(color: Colors.white),
+          ),
           backgroundColor: Colors.red[600],
         ),
       );

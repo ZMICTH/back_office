@@ -238,7 +238,10 @@ class _AddNewTablePageState extends State<AddNewTablePage> {
                                                   .showSnackBar(
                                                 SnackBar(
                                                   content: Text(
-                                                      'Table information successfully saved.'),
+                                                    'Table information successfully saved.',
+                                                    style: TextStyle(
+                                                        color: Colors.white),
+                                                  ),
                                                   backgroundColor:
                                                       Colors.green[600],
                                                 ),
@@ -249,7 +252,10 @@ class _AddNewTablePageState extends State<AddNewTablePage> {
                                                   .showSnackBar(
                                                 SnackBar(
                                                   content: Text(
-                                                      'Error saving table information: $error'),
+                                                    'Error saving table information: $error',
+                                                    style: TextStyle(
+                                                        color: Colors.white),
+                                                  ),
                                                   backgroundColor:
                                                       Colors.red[600],
                                                 ),

@@ -1,54 +1,40 @@
 import 'package:back_office/component/drawer.dart';
 import 'package:back_office/controller/reserve_ticket_controller.dart';
-import 'package:back_office/controller/table_controller.dart';
 import 'package:back_office/model/login_model.dart';
 import 'package:back_office/model/reserve_table_model.dart';
-import 'package:back_office/model/reserve_ticket_model.dart';
 import 'package:back_office/services/reserve_ticket_service.dart';
-import 'package:back_office/services/table_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
 import 'package:flutter/material.dart';
+import 'package:back_office/model/reserve_ticket_model.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
-class VerifyReservationPage extends StatefulWidget {
+class VerifyTicketPage extends StatefulWidget {
   @override
-  State<VerifyReservationPage> createState() => _VerifyReservationPageState();
+  State<VerifyTicketPage> createState() => _VerifyTicketPageState();
 }
 
-class _VerifyReservationPageState extends State<VerifyReservationPage> {
-  late ReserveTableHistoryController reservetablehistorycontroller =
-      ReserveTableHistoryController(TableCatalogFirebaseService());
+class _VerifyTicketPageState extends State<VerifyTicketPage> {
   late TicketConcertController ticketconcertcontroller =
       TicketConcertController(TicketConcertFirebaseService());
+
   bool isLoading = true;
-
-  List<ReserveTableHistory> reservetables = [];
+  List<BookingTicket> reserveticket = [];
   List<String> availableTables = [];
-  List<TicketConcertModel> ticketCats = [];
 
-  DateTime? _selectedReserveDate;
-  DateTimeRange? _selectedReserveDateRange;
-  DateTime? _selectedTableDate;
-  ReserveTableHistory? _selectedReservation;
+  BookingTicket? _selectedReservation;
   String? selectedTableNo;
   String? selectedTotalOfTable;
-
   final TextEditingController tableNoController = TextEditingController();
   final TextEditingController roundTableController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    reservetablehistorycontroller =
-        ReserveTableHistoryController(TableCatalogFirebaseService());
-    _loadReserveTableHistory();
+
     ticketconcertcontroller =
         TicketConcertController(TicketConcertFirebaseService());
-
-    _loadAllTickets();
-    _checkTodayEvent();
+    _loadReservationTicketHistory();
   }
 
   @override
@@ -58,20 +44,17 @@ class _VerifyReservationPageState extends State<VerifyReservationPage> {
     super.dispose();
   }
 
-  void _loadReserveTableHistory() async {
+  void _loadReservationTicketHistory() async {
     try {
       final userId =
           Provider.of<MemberUserModel>(context, listen: false).memberUser!.id;
-      // Fetch tables from Firebase
-      reservetables =
-          await reservetablehistorycontroller.fetchReserveTableHistory();
 
-      reservetables = reservetables
+      reserveticket = await ticketconcertcontroller.fetchReservationTicket();
+      reserveticket = reserveticket
           .where((reserve) => reserve.partnerId == userId)
           .toList();
-      // Update reserved combinations in the provider
-      Provider.of<ReserveTableProvider>(context, listen: false)
-          .setReserveTable(reservetables);
+      Provider.of<ReservationTicketProvider>(context, listen: false)
+          .setAllReservationTicket(reserveticket);
       setState(() => isLoading = false);
     } catch (e) {
       setState(() => isLoading = false);
@@ -79,145 +62,19 @@ class _VerifyReservationPageState extends State<VerifyReservationPage> {
     }
   }
 
-  Future<void> _loadAllTickets() async {
-    try {
-      final userId =
-          Provider.of<MemberUserModel>(context, listen: false).memberUser!.id;
-      var tickets = await ticketconcertcontroller.fetchTicketConcertModel();
-      tickets = tickets.where((order) => order.partnerId == userId).toList();
-      Provider.of<ReservationTicketProvider>(context, listen: false)
-          .setTicketCatalog(tickets);
-    } catch (e) {
-      print('Error fetching ConcertTickets: $e');
-    } finally {
-      setState(() {
-        isLoading = false;
-      });
-    }
-  }
-
-  void _checkTodayEvent() async {
-    final providerTicket =
-        Provider.of<ReservationTicketProvider>(context, listen: false);
-    final today = DateTime.now();
-    final concertReservations = providerTicket.AllTickets.where((reservation) {
-      return reservation.eventDate.year == today.year &&
-          reservation.eventDate.month == today.month &&
-          reservation.eventDate.day == today.day;
-    }).toList();
-
-    if (concertReservations.isNotEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _showTodayEventDialog(concertReservations);
-      });
-    }
-  }
-
-  void _showTodayEventDialog(List<TicketConcertModel> concertReservations) {
-    showDialog(
-      context: context,
-      builder: (context) => WillPopScope(
-        onWillPop: () async => false,
-        child: AlertDialog(
-          title: Text(
-            'Today\'s ${concertReservations.first.eventName} Event',
-            style: TextStyle(
-                fontSize: 26, fontWeight: FontWeight.bold, color: Colors.red),
-          ),
-          content: Text(
-            'Would you like to verify the tickets?',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pushNamed(context, '/verifyticket');
-              },
-              child: Text(
-                'OK',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                Navigator.of(context).pop();
-              },
-              child: Text(
-                'Go Back',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // void _selectReserveDateRange() async {
-  //   DateTimeRange? pickedRange = await showDateRangePicker(
-  //     context: context,
-  //     firstDate: DateTime(2023),
-  //     lastDate: DateTime(2050),
-  //     initialDateRange: _selectedReserveDateRange ??
-  //         DateTimeRange(
-  //           start: DateTime.now(),
-  //           end: DateTime.now()
-  //               .add(const Duration(days: 7)), // Default to one week range
-  //         ),
-  //   );
-
-  //   if (pickedRange != null && pickedRange != _selectedReserveDateRange) {
-  //     setState(() {
-  //       _selectedReserveDateRange = pickedRange;
-  //       _selectedTableDate =
-  //           null; // Clear the single date selection if range is updated
-  //     });
-  //     _filterReservesByDateRange(pickedRange);
-  //   }
-  // }
-
-  // void _filterReservesByDateRange(DateTimeRange dateRange) {
-  //   var filteredReserves = reservetables.where((reserve) {
-  //     return reserve.formattedSelectedDay.isAfter(dateRange.start) &&
-  //             reserve.formattedSelectedDay.isBefore(dateRange.end) ||
-  //         reserve.formattedSelectedDay.isAtSameMomentAs(dateRange.start) ||
-  //         reserve.formattedSelectedDay.isAtSameMomentAs(dateRange.end);
-  //   }).toList();
-  //   Provider.of<ReserveTableProvider>(context, listen: false)
-  //       .setReserveTable(filteredReserves);
-  // }
-
-  // void _clearReserveDateRange() {
-  //   setState(() {
-  //     _selectedReserveDateRange = null;
-  //   });
-  //   _loadReserveTableHistory(); // Reload all tables or reset to your default view
-  // }
-
   Future<void> _fetchAvailableTables() async {
     final provider = Provider.of<ReserveTableProvider>(context, listen: false);
     final memberUserModel =
         Provider.of<MemberUserModel>(context, listen: false);
 
     if (_selectedReservation != null) {
-      final DateTime selectedDate = _selectedReservation!.formattedSelectedDay;
+      final DateTime selectedDate = _selectedReservation!.eventDate;
       final String selectedLabel = _selectedReservation!.selectedTableLabel;
       final userId = memberUserModel.memberUser!.id;
 
       QuerySnapshot snapshot = await FirebaseFirestore.instance
-          .collection('reservation_table')
-          .where('formattedSelectedDay',
-              isEqualTo: Timestamp.fromDate(selectedDate))
+          .collection('reservation_ticket')
+          .where('eventDate', isEqualTo: Timestamp.fromDate(selectedDate))
           .where('selectedTableLabel', isEqualTo: selectedLabel)
           .where('checkIn', isEqualTo: true)
           .where('checkOut', isEqualTo: false)
@@ -250,19 +107,15 @@ class _VerifyReservationPageState extends State<VerifyReservationPage> {
   Future<void> _checkInCustomer() async {
     if (_selectedReservation != null) {
       if (await _validateCheckIn()) {
-        final userId = _selectedReservation!.userId;
-
         final tableLabelWithTotal = '$selectedTableNo';
         final partnerId =
             Provider.of<MemberUserModel>(context, listen: false).memberUser!.id;
 
-        // Update the checkIn status in the provider
         Provider.of<ReserveTableProvider>(context, listen: false)
             .updateCheckInStatus(_selectedReservation!.id, true);
 
-        // Update the reservation_table collection with tableNo and roundtable
         await FirebaseFirestore.instance
-            .collection('reservation_table')
+            .collection('reservation_ticket')
             .doc(_selectedReservation!.id)
             .set({
           'checkIn': true,
@@ -272,7 +125,6 @@ class _VerifyReservationPageState extends State<VerifyReservationPage> {
           'getTableTime': DateTime.now(),
         }, SetOptions(merge: true));
 
-        // Show a success message
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -290,9 +142,8 @@ class _VerifyReservationPageState extends State<VerifyReservationPage> {
 
   Future<bool> _validateCheckIn() async {
     final provider = Provider.of<ReserveTableProvider>(context, listen: false);
-    final selectedDate = _selectedReservation!.formattedSelectedDay;
+    final selectedDate = _selectedReservation!.eventDate;
 
-    // Check for roundTable duplication
     final roundTableExists = provider.allReserveTable.any((reservation) =>
         reservation.formattedSelectedDay
             .toLocal()
@@ -313,7 +164,6 @@ class _VerifyReservationPageState extends State<VerifyReservationPage> {
       return false;
     }
 
-    // Check for checkIn status
     final tableAlreadyCheckedIn = provider.allReserveTable.any((reservation) =>
         reservation.formattedSelectedDay
             .toLocal()
@@ -361,7 +211,7 @@ class _VerifyReservationPageState extends State<VerifyReservationPage> {
                   style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 ),
                 onPressed: () {
-                  Navigator.of(context).pop(); // Close the dialog
+                  Navigator.of(context).pop();
                 },
               ),
               TextButton(
@@ -370,8 +220,8 @@ class _VerifyReservationPageState extends State<VerifyReservationPage> {
                   style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 ),
                 onPressed: () {
-                  Navigator.of(context).pop(); // Close the dialog
-                  _outOfTimeCheckInCustomer(); // Call the out of time check-in function
+                  Navigator.of(context).pop();
+                  _outOfTimeCheckInCustomer();
                 },
               ),
             ],
@@ -397,9 +247,8 @@ class _VerifyReservationPageState extends State<VerifyReservationPage> {
 
     if (_selectedReservation != null) {
       try {
-        // Update the reservation_table collection with tableNo and roundtable
         await FirebaseFirestore.instance
-            .collection('reservation_table')
+            .collection('reservation_ticket')
             .doc(_selectedReservation!.id)
             .set({
           'checkIn': false,
@@ -410,10 +259,8 @@ class _VerifyReservationPageState extends State<VerifyReservationPage> {
           'outOfTimeCheckIn': true,
         }, SetOptions(merge: true));
 
-        // Reset selectedTableNo after processing
         provider.setSelectedTableNo(null);
 
-        // Show a success message
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -426,7 +273,6 @@ class _VerifyReservationPageState extends State<VerifyReservationPage> {
 
         print("Out of Time Check-In processed successfully.");
       } catch (e) {
-        // Handle error
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -454,22 +300,22 @@ class _VerifyReservationPageState extends State<VerifyReservationPage> {
 
   @override
   Widget build(BuildContext context) {
-    final provider = Provider.of<ReserveTableProvider>(context);
+    final providerTicket = Provider.of<ReservationTicketProvider>(context);
     final today = DateTime.now();
-    final todayReservations = provider.allReserveTable.where((reservation) {
-      return reservation.formattedSelectedDay.year == today.year &&
-          reservation.formattedSelectedDay.month == today.month &&
-          reservation.formattedSelectedDay.day == today.day;
+    final todayReservations =
+        providerTicket.reservationtickets.where((reservation) {
+      return reservation.eventDate.year == today.year &&
+          reservation.eventDate.month == today.month &&
+          reservation.eventDate.day == today.day;
     }).toList();
 
-    var sortedReservations = provider.allReserveTable;
-    sortedReservations.sort(
-        (b, a) => a.formattedSelectedDay.compareTo(b.formattedSelectedDay));
+    var sortedReservations = providerTicket.reservationtickets;
+    sortedReservations.sort((b, a) => a.paymentTime.compareTo(b.paymentTime));
 
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.onPrimary,
-        title: Text("Verify Booking"),
+        title: Text('Verify Concert Tickets'),
         foregroundColor: Theme.of(context).colorScheme.surface,
         titleTextStyle: TextStyle(
           fontSize: 25,
@@ -501,12 +347,13 @@ class _VerifyReservationPageState extends State<VerifyReservationPage> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
+                        SizedBox(width: 20),
                         ElevatedButton(
                           onPressed: () {
-                            Navigator.pushNamed(context, '/qrtable');
+                            Navigator.pushNamed(context, '/qrticket');
                           },
                           child: Text(
-                            'Scan QR Table',
+                            'Scan QR Ticket',
                             style: TextStyle(
                                 fontSize: 24,
                                 color: Colors.white,
@@ -518,80 +365,9 @@ class _VerifyReservationPageState extends State<VerifyReservationPage> {
                             backgroundColor: Colors.blueGrey[600],
                           ),
                         ),
-                        // SizedBox(width: 20),
-                        // ElevatedButton(
-                        //   onPressed: () {
-                        //     Navigator.pushNamed(context, '/qrticket');
-                        //   },
-                        //   child: Text(
-                        //     'Go to QR Ticket',
-                        //     style: TextStyle(
-                        //         fontSize: 24,
-                        //         color: Colors.white,
-                        //         fontWeight: FontWeight.bold),
-                        //   ),
-                        //   style: ElevatedButton.styleFrom(
-                        //     padding: EdgeInsets.symmetric(
-                        //         horizontal: 30, vertical: 10),
-                        //     backgroundColor: Colors.blueGrey[600],
-                        //   ),
-                        // ),
                       ],
                     ),
                   ),
-                  // Row(
-                  //   children: [
-                  //     Expanded(
-                  //       flex: 2,
-                  //       child: Padding(
-                  //         padding: const EdgeInsets.all(10.0),
-                  //         child: Column(
-                  //           crossAxisAlignment: CrossAxisAlignment.start,
-                  //           children: [
-                  //             SizedBox(height: 40),
-                  //             Row(
-                  //               children: [
-                  //                 ElevatedButton(
-                  //                   onPressed: _selectReserveDateRange,
-                  //                   child: const Text(
-                  //                     "Filter by Range",
-                  //                     style: TextStyle(
-                  //                         fontSize: 20,
-                  //                         fontWeight: FontWeight.bold),
-                  //                   ),
-                  //                 ),
-                  //                 SizedBox(width: 10),
-                  //                 if (_selectedReserveDateRange != null)
-                  //                   ElevatedButton(
-                  //                     onPressed: _clearReserveDateRange,
-                  //                     child: const Text(
-                  //                       "Clear Range",
-                  //                       style: TextStyle(
-                  //                           fontSize: 20,
-                  //                           fontWeight: FontWeight.bold,
-                  //                           color: Colors.black),
-                  //                     ),
-                  //                     style: ElevatedButton.styleFrom(
-                  //                       primary: Colors.red,
-                  //                     ),
-                  //                   ),
-                  //               ],
-                  //             ),
-                  //             const SizedBox(height: 20),
-                  //             if (_selectedReserveDateRange != null)
-                  //               Text(
-                  //                 "Selected Date: ${DateFormat('dd-MM-yyyy').format(
-                  //                   _selectedReserveDateRange!.start,
-                  //                 )} to ${DateFormat('dd-MM-yyyy').format(_selectedReserveDateRange!.end)}",
-                  //                 style: const TextStyle(fontSize: 16),
-                  //               ),
-                  //             const SizedBox(height: 10),
-                  //           ],
-                  //         ),
-                  //       ),
-                  //     ),
-                  //   ],
-                  // ),
                   Expanded(
                     child: ListView.builder(
                       itemCount: todayReservations.length,
@@ -605,7 +381,7 @@ class _VerifyReservationPageState extends State<VerifyReservationPage> {
                               // Fetch available tables when a reservation is selected
                             });
                           },
-                          child: ReservationCard(reservation),
+                          child: BookingTicketCard(reservation),
                         );
                       },
                     ),
@@ -617,7 +393,7 @@ class _VerifyReservationPageState extends State<VerifyReservationPage> {
             Expanded(
               flex: 1,
               child: _selectedReservation != null
-                  ? _buildReservationDetails(_selectedReservation!)
+                  ? _buildBookingTicketDetails(_selectedReservation!)
                   : Center(child: Text("Select a reservation to view details")),
             ),
           ],
@@ -626,9 +402,9 @@ class _VerifyReservationPageState extends State<VerifyReservationPage> {
     );
   }
 
-  Widget _buildReservationDetails(ReserveTableHistory reservation) {
+  Widget _buildBookingTicketDetails(BookingTicket reservation) {
     final numberFormat = NumberFormat("#,##0", "en_US");
-    return Consumer2<ReserveTableProvider, MemberUserModel>(
+    return Consumer2<ReservationTicketProvider, MemberUserModel>(
       builder: (context, provider, memberUserModel, child) {
         final tableLabels = memberUserModel.memberUser?.tableLabels ?? [];
         final matchingTable = tableLabels.firstWhere(
@@ -642,7 +418,7 @@ class _VerifyReservationPageState extends State<VerifyReservationPage> {
         // Get the round table availability
         final roundTableAvailability = selectedTableNo != null
             ? provider.getRoundTableAvailability(
-                selectedTableNo!, reservation.formattedSelectedDay)
+                selectedTableNo!, reservation.eventDate)
             : {};
 
         print("Matching table: $matchingTable");
@@ -657,22 +433,21 @@ class _VerifyReservationPageState extends State<VerifyReservationPage> {
               children: [
                 SizedBox(height: 20),
                 Text(
-                  "Reservation Details",
+                  "Booking Ticket Details",
                   style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 10),
-                Text(
-                    "User: ${reservation.nicknameUser} (${reservation.userPhone})"),
+                Text("User: ${reservation.nicknameUser}"),
+                const SizedBox(height: 10),
+                Text("Event: ${reservation.eventName}"),
                 const SizedBox(height: 10),
                 Text(
-                    "Date: ${DateFormat('yyyy-MM-dd').format(reservation.formattedSelectedDay)}"),
+                    "Date: ${DateFormat('yyyy-MM-dd').format(reservation.eventDate)}"),
                 const SizedBox(height: 10),
-                Text("Table: ${reservation.selectedTableLabel}"),
-                const SizedBox(height: 10),
-                Text("Seats: ${reservation.selectedSeats}"),
+                Text("Tickets: ${reservation.ticketQuantity}"),
                 const SizedBox(height: 10),
                 Text(
-                    "Total Amount: ${numberFormat.format(reservation.totalPrices)} THB"),
+                    "Total Payment: ${numberFormat.format(reservation.totalPayment)} THB"),
                 const SizedBox(height: 10),
                 Text(
                   "Payment Status: ${reservation.payable ? "Paid" : "Not Paid"}",
@@ -682,7 +457,7 @@ class _VerifyReservationPageState extends State<VerifyReservationPage> {
                   ),
                 ),
                 const SizedBox(height: 10),
-                Text("Shared Count: ${reservation.sharedWith!.length}"),
+                Text("Shared Conuts: ${reservation.sharedWith?.length}"),
                 const SizedBox(height: 10),
                 Text(
                   "Check-In Status: ${reservation.checkIn ? "Checked In" : "Not Checked In"}",
@@ -732,11 +507,9 @@ class _VerifyReservationPageState extends State<VerifyReservationPage> {
                             selectedTableNo = newValue;
                             print("Selected table number: $selectedTableNo");
 
-                            // Update round table availability when table number is changed
                             final roundTableAvailability =
                                 provider.getRoundTableAvailability(
-                                    selectedTableNo!,
-                                    reservation.formattedSelectedDay);
+                                    selectedTableNo!, reservation.eventDate);
                             print(
                                 "Round table availability: $roundTableAvailability");
                           });
@@ -752,13 +525,9 @@ class _VerifyReservationPageState extends State<VerifyReservationPage> {
                             TextStyle(fontSize: 22, color: Colors.black),
                       ),
                       alignment: AlignmentDirectional.center,
-                      value: roundTableAvailability.entries
-                          .firstWhere(
-                            (entry) => entry.value,
-                            orElse: () =>
-                                const MapEntry<String, bool>('1', true),
-                          )
-                          .key,
+                      value: roundTableController.text.isNotEmpty
+                          ? roundTableController.text
+                          : null,
                       items: roundTableAvailability.entries
                           .map<DropdownMenuItem<String>>((entry) {
                         return DropdownMenuItem<String>(
@@ -788,10 +557,9 @@ class _VerifyReservationPageState extends State<VerifyReservationPage> {
                     child: Text(
                       'Check-In',
                       style: TextStyle(
-                        fontSize: 20,
-                        color: Colors.black,
-                        fontWeight: FontWeight.bold,
-                      ),
+                          fontSize: 20,
+                          color: Colors.black,
+                          fontWeight: FontWeight.bold),
                     ),
                   ),
                   SizedBox(height: 10),
@@ -800,13 +568,12 @@ class _VerifyReservationPageState extends State<VerifyReservationPage> {
                     child: Text(
                       'Out of Time Check-In',
                       style: TextStyle(
-                        fontSize: 20,
-                        color: Colors.black,
-                        fontWeight: FontWeight.bold,
-                      ),
+                          fontSize: 20,
+                          color: Colors.black,
+                          fontWeight: FontWeight.bold),
                     ),
                     style: ElevatedButton.styleFrom(
-                      primary: Colors.orange, // Button color
+                      primary: Colors.orange,
                     ),
                   ),
                 ],
@@ -819,10 +586,10 @@ class _VerifyReservationPageState extends State<VerifyReservationPage> {
   }
 }
 
-class ReservationCard extends StatelessWidget {
-  final ReserveTableHistory reservation;
+class BookingTicketCard extends StatelessWidget {
+  final BookingTicket reservation;
 
-  ReservationCard(this.reservation);
+  BookingTicketCard(this.reservation);
 
   @override
   Widget build(BuildContext context) {
@@ -849,14 +616,14 @@ class ReservationCard extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  "Reserved on ${DateFormat('yyyy-MM-dd').format(reservation.formattedSelectedDay)}",
+                  "Event on ${DateFormat('yyyy-MM-dd').format(reservation.eventDate)}",
                   style: const TextStyle(fontSize: 18),
                 ),
               ],
             ),
             const SizedBox(height: 10),
             Text(
-                "Table type : ${reservation.selectedTableLabel} and booking ${reservation.selectedSeats} seats "),
+                "${reservation.eventName} : ${reservation.ticketQuantity} tickets at ${reservation.selectedTableLabel}"),
             const SizedBox(height: 10),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
@@ -864,7 +631,7 @@ class ReservationCard extends StatelessWidget {
                 Column(
                   children: [
                     Text(
-                        "Total amount: ${numberFormat.format(reservation.totalPrices)} THB"),
+                        "Total amount: ${numberFormat.format(reservation.totalPayment)} THB"),
                     Text(
                       'Payment Status: ${reservation.payable ? "Yes" : "No"}',
                       style: TextStyle(

@@ -1,3 +1,4 @@
+import 'package:back_office/model/login_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
@@ -135,8 +136,9 @@ class ReserveTableHistory {
   List<String>? sharedWith;
   String partnerId;
   String? tableNo; // Add tableNo
-  String? roundTable; // Add roundTable
+  String? roundtable; // Add roundtable
   bool? checkOut;
+  bool? outOfTimeCheckIn;
 
   ReserveTableHistory({
     this.id = "",
@@ -156,8 +158,9 @@ class ReserveTableHistory {
     required this.sharedWith,
     required this.partnerId,
     required this.tableNo, // Add tableNo
-    required this.roundTable, // Add roundTable
+    required this.roundtable, // Add roundtable
     required this.checkOut,
+    required this.outOfTimeCheckIn,
   });
 
   factory ReserveTableHistory.fromJson(Map<String, dynamic> json) {
@@ -183,8 +186,9 @@ class ReserveTableHistory {
           : null,
       partnerId: json['partnerId'] as String,
       tableNo: json['tableNo'] as String? ?? "",
-      roundTable: json['roundTable'] as String? ?? "",
+      roundtable: json['roundtable'] as String? ?? "",
       checkOut: json['checkOut'],
+      outOfTimeCheckIn: json['outOfTimeCheckIn'],
     );
   }
 
@@ -211,8 +215,9 @@ class ReserveTableHistory {
           : null,
       partnerId: json['partnerId'] as String,
       tableNo: json['tableNo'] as String? ?? "",
-      roundTable: json['roundTable'] as String? ?? "",
+      roundtable: json['roundtable'] as String? ?? "",
       checkOut: json['checkOut'],
+      outOfTimeCheckIn: json['outOfTimeCheckIn'],
     );
   }
 
@@ -234,8 +239,9 @@ class ReserveTableHistory {
       'sharedWith': sharedWith,
       'partnerId': partnerId,
       'tableNo': tableNo, // Add tableNo
-      'roundTable': roundTable, // Add roundTable
+      'roundtable': roundtable, // Add roundtable
       'checkOut': checkOut,
+      'outOfTimeCheckIn': outOfTimeCheckIn,
     };
   }
 }
@@ -276,13 +282,20 @@ class ReserveTableProvider extends ChangeNotifier {
   List<TableCatalog> _allTables = [];
   List<TableCatalog> get allTables => _allTables;
 
+  List<String> _reservedTableNumbers = [];
+  List<String> get reservedTableNumbers => _reservedTableNumbers;
+
+  String? _selectedTableNo;
+  String? get selectedTableNo => _selectedTableNo;
+
   void setTableCatalog(List<TableCatalog> tablecatalog) {
     _allTables = tablecatalog;
     notifyListeners();
   }
 
-  void setReserveTable(List<ReserveTableHistory> bookingtable) {
-    _allReserveTable = bookingtable;
+  // Method to set reservation data from Firebase
+  void setReserveTable(List<ReserveTableHistory> bookingTable) {
+    _allReserveTable = bookingTable;
     notifyListeners();
   }
 
@@ -330,22 +343,69 @@ class ReserveTableProvider extends ChangeNotifier {
               'Seats': reservation.selectedSeats,
               'Total Price': reservation.totalPrices,
               'Payable': reservation.payable ? 'Yes' : 'No',
-              'Shared Count': reservation.sharedCount,
+              'Shared Count': reservation.sharedWith?.length,
               'Shared With': reservation.sharedWith?.join(', ') ?? '',
               'Check-Out': reservation.checkOut ?? false ? 'Yes' : 'No',
             })
         .toList();
   }
 
-  // Add this method to get all tableNos with checkIn=true for a specific date and label
-  List<String> getCheckedInTableNos(DateTime date, String label) {
-    return _allReserveTable
+  void setSelectedTableNo(String? tableNo) {
+    _selectedTableNo = tableNo;
+    print("setSelectedTableNo called. Selected tableNo: $tableNo");
+    notifyListeners();
+  }
+
+  // Method to get available tables based on zone and availability status
+  List<String> getAvailableTables(
+      MemberUserModel memberUserModel, String tableLabel) {
+    Set<String> reservedTables = _allReserveTable
         .where((reservation) =>
-            reservation.formattedSelectedDay
-                .toLocal()
-                .isAtSameMomentAs(date.toLocal()) &&
-            reservation.selectedTableLabel == label)
-        .map((reservation) => reservation.tableNo ?? "")
+            reservation.selectedTableLabel == tableLabel &&
+            reservation.checkIn &&
+            !(reservation.checkOut ?? false)) // Ensure checkOut is non-nullable
+        .map((reservation) =>
+            reservation.tableNo ?? "") // Ensure tableNo is non-nullable
+        .toSet();
+
+    List<String> availableTables = [];
+    // Get totalTables from MemberUserModel
+    var tableInfo = memberUserModel.memberUser?.tableLabels.firstWhere(
+        (table) => table['label'] == tableLabel,
+        orElse: () => <String, dynamic>{});
+    int totalTables = tableInfo?['totaloftable'] ?? 0;
+
+    for (var i = 1; i <= totalTables; i++) {
+      String tableNo = "$tableLabel $i";
+      if (!reservedTables.contains(tableNo)) {
+        availableTables.add(tableNo);
+      }
+    }
+
+    print("Available tables for $tableLabel: $availableTables");
+    return availableTables;
+  }
+
+  // Method to get round tables and their availability status for a specific table on a given date
+  Map<String, bool> getRoundTableAvailability(String tableNo, DateTime date) {
+    List<int> usedRoundTables = _allReserveTable
+        .where((reservation) =>
+            reservation.tableNo == tableNo &&
+            reservation.formattedSelectedDay.year == date.year &&
+            reservation.formattedSelectedDay.month == date.month &&
+            reservation.formattedSelectedDay.day == date.day)
+        .map((reservation) => int.tryParse(reservation.roundtable ?? '0') ?? 0)
         .toList();
+
+    print("Used round tables for $tableNo on $date: $usedRoundTables");
+
+    Map<String, bool> roundTableAvailability = {};
+    for (int i = 1; i <= 5; i++) {
+      roundTableAvailability[i.toString()] = !usedRoundTables.contains(i);
+    }
+
+    print(
+        "Round table availability for $tableNo on $date: $roundTableAvailability");
+    return roundTableAvailability;
   }
 }

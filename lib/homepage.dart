@@ -1,10 +1,13 @@
 import 'package:back_office/component/drawer.dart';
 import 'package:back_office/controller/bill_order_controller.dart';
+import 'package:back_office/controller/reserve_ticket_controller.dart';
 import 'package:back_office/controller/table_controller.dart';
 import 'package:back_office/model/bill_order_model.dart';
 import 'package:back_office/model/login_model.dart';
 import 'package:back_office/model/reserve_table_model.dart';
+import 'package:back_office/model/reserve_ticket_model.dart';
 import 'package:back_office/services/bill_historyservice.dart';
+import 'package:back_office/services/reserve_ticket_service.dart';
 import 'package:back_office/services/table_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -19,6 +22,8 @@ class NewHomePage extends StatefulWidget {
 class _NewHomePageState extends State<NewHomePage> {
   late ReserveTableHistoryController reservetablehistorycontroller =
       ReserveTableHistoryController(TableCatalogFirebaseService());
+  late TicketConcertController ticketconcertcontroller =
+      TicketConcertController(TicketConcertFirebaseService());
 
   void _refreshPage() {
     fetchBillOrders();
@@ -32,6 +37,7 @@ class _NewHomePageState extends State<NewHomePage> {
   bool isChecked = false;
   String partnerId = '';
   List<ReserveTableHistory> reservetables = [];
+  List<BookingTicket> reserveticket = [];
   String? selectedTable;
 
   String formatDate(DateTime dateTime) {
@@ -47,6 +53,9 @@ class _NewHomePageState extends State<NewHomePage> {
     reservetablehistorycontroller =
         ReserveTableHistoryController(TableCatalogFirebaseService());
     _loadReserveTableHistory();
+    ticketconcertcontroller =
+        TicketConcertController(TicketConcertFirebaseService());
+    _loadReservationTicketHistory();
   }
 
   Future<void> fetchBillOrders() async {
@@ -80,6 +89,24 @@ class _NewHomePageState extends State<NewHomePage> {
           .toList();
       Provider.of<ReserveTableProvider>(context, listen: false)
           .setReserveTable(reservetables);
+      setState(() => isLoading = false);
+    } catch (e) {
+      setState(() => isLoading = false);
+      print('Error loading data: $e');
+    }
+  }
+
+  void _loadReservationTicketHistory() async {
+    try {
+      final userId =
+          Provider.of<MemberUserModel>(context, listen: false).memberUser!.id;
+
+      reserveticket = await ticketconcertcontroller.fetchReservationTicket();
+      reserveticket = reserveticket
+          .where((reserve) => reserve.partnerId == userId)
+          .toList();
+      Provider.of<ReservationTicketProvider>(context, listen: false)
+          .setAllReservationTicket(reserveticket);
       setState(() => isLoading = false);
     } catch (e) {
       setState(() => isLoading = false);
@@ -122,10 +149,13 @@ class _NewHomePageState extends State<NewHomePage> {
                 children: [
                   Padding(
                     padding: const EdgeInsets.all(8.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children:
-                          buildTableLabels(context, memberUser!.tableLabels),
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children:
+                            buildTableLabels(context, memberUser!.tableLabels),
+                      ),
                     ),
                   ),
                   Divider(color: Colors.grey[400]),
@@ -231,10 +261,22 @@ class _NewHomePageState extends State<NewHomePage> {
   List<Widget> buildTableLabels(
       BuildContext context, List<Map<String, dynamic>> tableLabels) {
     var reserveTableProvider = Provider.of<ReserveTableProvider>(context);
+    var reservationTicketProvider =
+        Provider.of<ReservationTicketProvider>(context);
+
     List<ReserveTableHistory> allReserveTable =
         reserveTableProvider.allReserveTable;
+    List<BookingTicket> allReservationTickets =
+        reservationTicketProvider.reservationtickets;
 
     List<Widget> tableWidgets = [];
+
+    final today = DateTime.now();
+    bool isEventDay = reservationTicketProvider.AllTickets.any((ticket) =>
+        ticket.eventDate.year == today.year &&
+        ticket.eventDate.month == today.month &&
+        ticket.eventDate.day == today.day);
+
     for (var table in tableLabels) {
       String label = table['label'] ?? 'Unknown';
       int total = table['totaloftable'] ?? 0;
@@ -243,6 +285,13 @@ class _NewHomePageState extends State<NewHomePage> {
             reservation.tableNo == '$label $i' &&
             reservation.checkIn &&
             reservation.checkOut != true);
+
+        // Check if the table is reserved for an event
+        bool isEventReserved = isEventDay &&
+            allReservationTickets.any((reservation) =>
+                reservation.tableNo == '$label $i' &&
+                reservation.checkIn &&
+                reservation.checkOut != true);
 
         tableWidgets.add(
           GestureDetector(
@@ -256,9 +305,13 @@ class _NewHomePageState extends State<NewHomePage> {
               padding: const EdgeInsets.all(8.0),
               margin: const EdgeInsets.all(4.0),
               decoration: BoxDecoration(
-                color: isReserved ? Colors.yellow : Colors.white,
+                color: isReserved || isEventReserved
+                    ? Colors.yellow
+                    : Colors.white,
                 border: Border.all(
-                    color: isReserved ? Colors.orange : Colors.blueAccent),
+                    color: isReserved || isEventReserved
+                        ? Colors.orange
+                        : Colors.blueAccent),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Column(
@@ -269,7 +322,15 @@ class _NewHomePageState extends State<NewHomePage> {
                   ),
                   if (isReserved)
                     Text(
-                      'มีการใช้งานอยู่',
+                      'กำลังใช้งาน',
+                      style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.red),
+                    ),
+                  if (isEventReserved)
+                    Text(
+                      'กำลังใช้งานอีเว้นท์',
                       style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
@@ -286,35 +347,44 @@ class _NewHomePageState extends State<NewHomePage> {
   }
 
   Widget buildTableOrderDetails(String tableNo) {
+    DateTime today = DateTime.now();
     List<OrderHistories> tableOrders =
         Provider.of<BillOrderProvider>(context, listen: false)
             .unpaidBillOrder
-            .where((order) => order.tableNo == tableNo)
+            .where((order) =>
+                order.tableNo == tableNo &&
+                order.billingTime.year == today.year &&
+                order.billingTime.month == today.month &&
+                order.billingTime.day == today.day)
             .toList();
 
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: ListView.builder(
-        itemCount: tableOrders.length,
-        itemBuilder: (context, index) {
-          final order = tableOrders[index];
-          return Card(
-            child: Padding(
-              padding: EdgeInsets.all(8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  buildOrderHeader(order),
-                  ...order.orders.map((billOrder) {
-                    return buildOrderItem(billOrder);
-                  }).toList(),
-                  buildOrderFooter(order),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: ListView.builder(
+            itemCount: tableOrders.length,
+            itemBuilder: (context, index) {
+              final order = tableOrders[index];
+              return Card(
+                child: Padding(
+                  padding: EdgeInsets.all(8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      buildOrderHeader(order),
+                      ...order.orders.map((billOrder) {
+                        return buildOrderItem(billOrder);
+                      }).toList(),
+                      buildOrderFooter(order),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 
@@ -376,6 +446,7 @@ class _NewHomePageState extends State<NewHomePage> {
   }
 
   Widget buildOrderItem(Map<String, dynamic> billOrder) {
+    final numberFormat = NumberFormat("#,##0", "en_US");
     return Padding(
       padding: EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -388,7 +459,7 @@ class _NewHomePageState extends State<NewHomePage> {
             ),
           ),
           Text(
-            "${billOrder['price']} THB",
+            "${numberFormat.format(billOrder['price'])} THB",
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
         ],
@@ -397,6 +468,7 @@ class _NewHomePageState extends State<NewHomePage> {
   }
 
   Widget buildOrderFooter(OrderHistories order) {
+    final numberFormat = NumberFormat("#,##0", "en_US");
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
@@ -406,14 +478,14 @@ class _NewHomePageState extends State<NewHomePage> {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                "Amount before VAT: ${(order.totalPrice / 1.07).toStringAsFixed(2)} THB",
+                "Amount before VAT: ${numberFormat.format(order.totalPrice / 1.07)} THB",
                 style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                     color: Colors.green),
               ),
               Text(
-                "VAT(7%): ${(order.totalPrice - (order.totalPrice / 1.07)).toStringAsFixed(2)} THB",
+                "VAT(7%): ${numberFormat.format(order.totalPrice - (order.totalPrice / 1.07))} THB",
                 style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -421,7 +493,7 @@ class _NewHomePageState extends State<NewHomePage> {
               ),
               SizedBox(height: 3),
               Text(
-                "Total: ${order.totalPrice.toStringAsFixed(2)} THB",
+                "Total: ${numberFormat.format(order.totalPrice)} THB",
                 style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -435,6 +507,7 @@ class _NewHomePageState extends State<NewHomePage> {
   }
 
   void showOrderDetailsDialog(BuildContext context, OrderHistories order) {
+    final numberFormat = NumberFormat("#,##0", "en_US");
     List<bool> checkboxStates =
         List<bool>.generate(order.orders.length, (_) => false);
     bool isAllSelected = false;
@@ -515,15 +588,15 @@ class _NewHomePageState extends State<NewHomePage> {
                     SizedBox(height: 10),
                     Divider(),
                     Text(
-                      "Amount before VAT: ${(order.totalPrice / 1.07).toStringAsFixed(2)} THB",
+                      "Amount before VAT: ${numberFormat.format(order.totalPrice / 1.07)} THB",
                       style: TextStyle(fontSize: 20, color: Colors.black),
                     ),
                     Text(
-                      "VAT(7%): ${(order.totalPrice - (order.totalPrice / 1.07)).toStringAsFixed(2)} THB",
+                      "VAT(7%): ${numberFormat.format(order.totalPrice - (order.totalPrice / 1.07))} THB",
                       style: TextStyle(fontSize: 20, color: Colors.black),
                     ),
                     Text(
-                      "Total: ${order.totalPrice.toStringAsFixed(2)} THB",
+                      "Total: ${numberFormat.format(order.totalPrice)} THB",
                       style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -638,7 +711,10 @@ class _NewHomePageState extends State<NewHomePage> {
 
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('Check Outs successfully!'),
+                    content: Text(
+                      'Check Outs successfully!',
+                      style: TextStyle(color: Colors.white),
+                    ),
                     backgroundColor: Colors.green,
                   ),
                 );
@@ -658,13 +734,19 @@ class _NewHomePageState extends State<NewHomePage> {
   Future<void> checkOutTable(String tableNo) async {
     try {
       // Find all reservations for the selected table
-      var reservations =
+      var tableReservations =
           Provider.of<ReserveTableProvider>(context, listen: false)
               .allReserveTable
               .where((reservation) => reservation.tableNo == tableNo)
               .toList();
 
-      for (var reservation in reservations) {
+      var eventReservations =
+          Provider.of<ReservationTicketProvider>(context, listen: false)
+              .reservationtickets
+              .where((reservation) => reservation.tableNo == tableNo)
+              .toList();
+
+      for (var reservation in tableReservations) {
         await FirebaseFirestore.instance
             .collection('reservation_table')
             .doc(reservation.id)
@@ -672,8 +754,9 @@ class _NewHomePageState extends State<NewHomePage> {
           'checkOut': true,
           'checkOutTime': Timestamp.now(),
         });
+      }
 
-        // Also update the reservation_ticket collection
+      for (var reservation in eventReservations) {
         await FirebaseFirestore.instance
             .collection('reservation_ticket')
             .doc(reservation.id)

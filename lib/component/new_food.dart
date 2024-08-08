@@ -387,7 +387,10 @@ class _NewProductPageState extends State<NewProductPage> {
       // Show a SnackBar upon successful data save
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('$_newProductname added successfully!'),
+          content: Text(
+            '$_newProductname added successfully!',
+            style: TextStyle(color: Colors.white),
+          ),
           backgroundColor: Colors.green[600],
         ),
       );
@@ -396,7 +399,10 @@ class _NewProductPageState extends State<NewProductPage> {
       print("Error adding document: $error");
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to add $_newProductname. Please try again.'),
+          content: Text(
+            'Failed to add $_newProductname. Please try again.',
+            style: TextStyle(color: Colors.white),
+          ),
           backgroundColor: Colors.red[600],
         ),
       );

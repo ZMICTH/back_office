@@ -422,7 +422,10 @@ class _AddTicketPageState extends State<AddTicketPage> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('$_eventName added successfully!'),
+          content: Text(
+            '$_eventName added successfully!',
+            style: TextStyle(color: Colors.white),
+          ),
           backgroundColor: Colors.green[600],
         ),
       );
@@ -431,7 +434,10 @@ class _AddTicketPageState extends State<AddTicketPage> {
       print("Error adding document: $error");
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to add $_eventName. Please try again.'),
+          content: Text(
+            'Failed to add $_eventName. Please try again.',
+            style: TextStyle(color: Colors.white),
+          ),
           backgroundColor: Colors.red[600],
         ),
       );
